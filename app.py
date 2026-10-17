@@ -1,4 +1,5 @@
 from text_processing import create_chunks
+from retrieval import retrieve_chunks
 import streamlit as st
 import numpy as np
 import faiss
@@ -44,25 +45,18 @@ def extract_text(pdf_file):
 
 
 def answer_question(question, index, all_chunks):
+    
     query_embedding = embedding_model.encode(
         [question],
         convert_to_numpy=True
     )
-    query_embedding = np.asarray(
-        query_embedding, dtype=np.float32
+
+    retrieved_chunks, retrieved_sources, scores = retrieve_chunks(
+        query_embedding,
+        index,
+        all_chunks,
+        top_k=3
     )
-    faiss.normalize_L2(query_embedding)
-
-    k = min(3, index.ntotal)
-    scores, indices = index.search(query_embedding, k)
-
-    retrieved_chunks = []
-    retrieved_sources = []
-
-    for idx in indices[0]:
-        if 0 <= idx < len(all_chunks):
-            retrieved_chunks.append(all_chunks[idx]["text"])
-            retrieved_sources.append(all_chunks[idx]["source"])
 
     context = "\n\n".join(retrieved_chunks)
 
