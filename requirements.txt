@@ -1,0 +1,9 @@
+streamlit
+numpy
+faiss-cpu
+pypdf
+sentence-transformers
+transformers
+torch
+langchain-text-splitters
+pyngrok
