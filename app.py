@@ -1,3 +1,4 @@
+from text_processing import create_chunks
 import streamlit as st
 import numpy as np
 import faiss
@@ -32,12 +33,12 @@ def extract_text(pdf_file):
             text += page_text
     return text
 
-def create_chunks(text):
-    splitter = RecursiveCharacterTextSplitter(
-        chunk_size=500,
-        chunk_overlap=100
-    )
-    return splitter.split_text(text)
+# def create_chunks(text):
+#     splitter = RecursiveCharacterTextSplitter(
+#         chunk_size=500,
+#         chunk_overlap=100
+#     )
+#     return splitter.split_text(text)
 
 
 
