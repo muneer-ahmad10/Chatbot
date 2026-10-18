@@ -2,320 +2,426 @@
 
 # 📚 PDF RAG Chatbot
 
-### Document Question Answering with Semantic Search
+**Ask questions about your PDFs in natural language, and inspect the exact excerpts used to answer.**
 
-![Python](https://img.shields.io/badge/Python-3776AB?style=for-the-badge&logo=python&logoColor=white)
-![Streamlit](https://img.shields.io/badge/Streamlit-FF4B4B?style=for-the-badge&logo=streamlit&logoColor=white)
-![PyTorch](https://img.shields.io/badge/PyTorch-EE4C2C?style=for-the-badge&logo=pytorch&logoColor=white)
-![Hugging Face](https://img.shields.io/badge/FLAN--T5-Hugging_Face-FFD21E?style=for-the-badge&logo=huggingface&logoColor=black)
-![FAISS](https://img.shields.io/badge/Vector_Search-FAISS-0467DF?style=for-the-badge)
-![Colab](https://img.shields.io/badge/Developed_in-Google_Colab-F9AB00?style=for-the-badge&logo=googlecolab&logoColor=white)
+Built with **Retrieval-Augmented Generation (RAG)**, Sentence Transformers, FAISS, Hugging Face Transformers, and Streamlit.
+
+<p>
+  <img src="https://img.shields.io/badge/Python-3776AB?style=flat&logo=python&logoColor=white" alt="Python" />
+  <img src="https://img.shields.io/badge/Streamlit-FF4B4B?style=flat&logo=streamlit&logoColor=white" alt="Streamlit" />
+  <img src="https://img.shields.io/badge/FAISS-Vector_Search-0467DF?style=flat" alt="FAISS" />
+  <img src="https://img.shields.io/badge/Hugging_Face-Models-FFD21E?style=flat&logo=huggingface&logoColor=black" alt="Hugging Face" />
+  <img src="https://img.shields.io/badge/Tests-pytest-0A9EDC?style=flat" alt="pytest" />
+  <a href="https://github.com/muneer-ahmad10/Chatbot/actions">
+    <img src="https://img.shields.io/badge/GitHub_Actions-CI-success?style=flat&logo=githubactions&logoColor=white" alt="GitHub Actions" />
+  </a>
+</p>
+
+[Overview](#-overview) •
+[Features](#-key-features) •
+[Architecture](#-architecture) •
+[How It Works](#-how-it-works) •
+[Tech Stack](#-technology-stack) •
+[Getting Started](#-installation-and-usage) •
+[Testing](#-testing-and-continuous-integration) •
+[Limitations](#-limitations) •
+[Roadmap](#-future-improvements)
 
 </div>
 
 ---
 
-A Retrieval-Augmented Generation (RAG) application that allows users to upload PDF documents and ask questions in natural language. The system retrieves relevant document chunks using semantic embeddings and FAISS, then uses Google's FLAN-T5 model to generate context-informed answers through a Streamlit chat interface.
+## 📖 Overview
 
-> **Developed and tested in Google Colab**, with temporary public access provided through an ngrok tunnel.
+Finding specific information in lengthy PDF documents can be time-consuming. This project combines semantic retrieval with a text-generation model to help users find relevant information and ask questions about their documents.
 
-## 📑 Table of Contents
+The application extracts PDF text, divides it into overlapping chunks, converts those chunks into embeddings, retrieves relevant passages using FAISS, and supplies the retrieved context to a language model to generate an answer.
 
-- [Project Overview](#-project-overview)
-- [Key Features](#-key-features)
-- [Architecture and Workflow](#-architecture-and-workflow)
-- [Technology Stack](#️-technology-stack)
-- [Retrieval and Generation Details](#-retrieval-and-generation-details)
-- [Testing](#-testing)
-- [Installation and Local Execution](#-installation-and-local-execution)
-- [Running in Google Colab](#️-running-in-google-colab)
-- [Current Limitations](#️-current-limitations)
-- [Planned Improvements](#-planned-improvements)
-- [Author](#-author)
+It also includes automated unit tests and a GitHub Actions workflow to validate key text-processing and retrieval behaviors.
 
----
+### At a Glance
 
-## 🚀 Project Overview
-
-Searching long PDF documents manually can be time-consuming. This project explores how retrieval and language generation can work together to make document-based question answering more convenient.
-
-The application follows a RAG pipeline:
-
-| Step | Stage |
-|:--:|:--|
-| **1** | Extract text from uploaded PDF documents. |
-| **2** | Split the extracted text into overlapping chunks. |
-| **3** | Convert each chunk into a semantic embedding. |
-| **4** | Index the embeddings in FAISS for similarity search. |
-| **5** | Retrieve the top three chunks relevant to a user's question. |
-| **6** | Pass the retrieved context and question to FLAN-T5. |
-| **7** | Display the generated answer and retrieved source excerpts in the chat interface. |
-
-> The model is instructed to use the supplied document context and acknowledge when information is missing. This instruction helps guide responses but does not guarantee that every answer will be correct.
+| | |
+|---|---|
+| **Chunking** | 500 characters, 100 overlap |
+| **Embeddings** | `all-MiniLM-L6-v2` |
+| **Retrieval** | FAISS `IndexFlatIP`, top 3 chunks |
+| **Generation** | `google/flan-t5-base` |
+| **Interface** | Streamlit chat |
+| **Tests** | 5 pytest cases, run through GitHub Actions |
 
 ---
 
 ## ✨ Key Features
 
-| Feature | Description |
-|:--|:--|
-| 📄 **Multiple PDF uploads** | Process multiple documents in one session. |
-| 🔎 **PDF text extraction** | Extract readable text using PyPDF. |
-| ✂️ **Overlapping chunking** | Use `RecursiveCharacterTextSplitter` with a 500-character chunk size and 100-character overlap. |
-| 🧬 **Semantic embeddings** | Represent text and questions using `all-MiniLM-L6-v2`. |
-| 🧭 **Vector similarity search** | Retrieve the top three candidate chunks with FAISS. |
-| 🤖 **Context-informed generation** | Generate answers using `google/flan-t5-base`. |
-| 💬 **Chat interface** | Ask follow-up questions through Streamlit. |
-| 📌 **Source excerpts** | Display retrieved text and associated PDF filenames. |
-| ⚡ **Cached model loading** | Use Streamlit's `@st.cache_resource` to avoid repeatedly loading the same models during app reruns. |
-| ☁️ **Colab-based access** | Expose the Streamlit app temporarily through ngrok. |
+<table>
+  <tr>
+    <td width="50%" valign="top">
+
+**📂 Input & Processing**
+
+- **Multiple PDF uploads:** Upload multiple PDF files within a session.
+- **PDF text extraction:** Extract available text using PyPDF.
+- **Text chunking:** Split extracted text into 500-character chunks with 100-character overlap.
+
+**🔎 Retrieval & Generation**
+
+- **Semantic embeddings:** Generate embeddings with `all-MiniLM-L6-v2`.
+- **FAISS retrieval:** Retrieve the top three relevant chunks using normalized vectors and inner-product similarity.
+- **Context-based generation:** Generate responses using `google/flan-t5-base`.
+
+  </td>
+    <td width="50%" valign="top">
+
+**💬 User Experience**
+
+- **Conversational interface:** Ask questions through Streamlit's chat interface.
+- **Source inspection:** Review retrieved text excerpts and their source PDF filenames.
+
+**⚡ Performance**
+
+- **Model caching:** Cache loaded models to reduce repeated initialization.
+- **Session-based reuse:** Use uploaded-file hashes to identify unchanged documents and reuse processed chunks and the FAISS index.
+
+**🧪 Quality**
+
+- **Automated testing:** Validate chunking, retrieval ranking, empty-index handling, and top-k behavior with pytest.
+- **Continuous integration:** Run automated tests through GitHub Actions on pushes and pull requests.
+
+  </td>
+  </tr>
+</table>
 
 ---
 
-## 🧠 Architecture and Workflow
+## 🏗️ Architecture
 
-```text
-                  PDF Upload(s)
-                       |
-                       v
-               PDF Text Extraction
-                    (PyPDF)
-                       |
-                       v
-             Recursive Text Splitting
-              Chunk Size: 500
-              Overlap: 100
-                       |
-                       v
-             Sentence Embeddings
-             all-MiniLM-L6-v2
-                       |
-                       v
-               L2 Normalization
-                       |
-                       v
-               FAISS Vector Index
-                IndexFlatIP
-                       |
-                       |
-User Question ----------+
-       |
-       v
-Question Embedding + Normalization
-       |
-       v
-Top-3 Similarity Search
-       |
-       v
-Retrieved Document Context
-       |
-       +---- Conversation History
-       |
-       v
-      FLAN-T5-base
-       |
-       v
-    Generated Answer
-       |
-       v
-Streamlit Chat + Source Excerpts
+```mermaid
+flowchart TD
+    subgraph Indexing["Indexing Pipeline"]
+        A[PDF Documents] --> B["PDF Text Extraction<br/>(PyPDF)"]
+        B --> C["Text Chunking<br/>500 Characters / 100 Overlap"]
+        C --> D["Sentence Transformer<br/>all-MiniLM-L6-v2"]
+        D --> E[L2 Normalization]
+        E --> F[("FAISS Index<br/>IndexFlatIP")]
+        C --> S[Stored Chunks]
+    end
+
+    subgraph Query["Query Pipeline"]
+        Q[User Question] --> QE[Query Embedding]
+        QE --> QN[Query Normalization]
+        QN --> R["Top-3 Chunk Retrieval"]
+        F --> R
+        S --> R
+        R --> P["Retrieved Context + Question<br/>+ Recent Chat History"]
+        P --> G[FLAN-T5 Base]
+        G --> H[Generated Answer]
+        H --> UI["Streamlit Chat Interface<br/>+ Retrieved Excerpts"]
+    end
 ```
 
 ---
 
-## 🛠️ Technology Stack
+## ⚙️ How It Works
 
-| Component | Technology |
-|:--|:--|
-| Programming language | Python |
-| Interactive application | Streamlit |
-| PDF parsing | PyPDF |
-| Text splitting | LangChain Text Splitters |
-| Embedding model | Sentence Transformers — `all-MiniLM-L6-v2` |
-| Vector search | FAISS — `IndexFlatIP` |
-| Similarity approach | Inner product on L2-normalized embeddings |
-| Text generation | Hugging Face Transformers — `google/flan-t5-base` |
-| Deep learning framework | PyTorch |
-| Development environment | Google Colab |
-| Temporary public access | pyngrok / ngrok |
-| Secret management | Google Colab Secrets |
+<details open>
+<summary><b>1. PDF Text Extraction</b></summary>
 
----
+<br>
 
-## 🔍 Retrieval and Generation Details
+The application uses `pypdf.PdfReader` to extract available text from uploaded PDF files. Pages without extractable text are skipped, and documents without usable text trigger a warning.
 
-### 1️⃣ PDF text extraction
+</details>
 
-The application reads uploaded PDFs with `PdfReader` and extracts available text from their pages. The current implementation works with text-based PDFs; scanned documents may require an OCR step.
+<details open>
+<summary><b>2. Text Chunking</b></summary>
 
-### 2️⃣ Text chunking
+<br>
 
-Long document text is split into smaller, overlapping chunks.
+Extracted text is divided into smaller, overlapping chunks using `RecursiveCharacterTextSplitter`.
 
-| Setting | Value |
-|:--|:--|
+| Parameter | Value |
+|---|---|
 | Chunk size | 500 characters |
 | Chunk overlap | 100 characters |
+| Library | LangChain Text Splitters |
 
-Overlap helps preserve context when a relevant sentence or passage falls near a chunk boundary.
+Chunking allows the retrieval system to search smaller passages instead of processing an entire document as one unit. Overlap helps preserve context around chunk boundaries.
 
-### 3️⃣ Embedding generation
+</details>
 
-The `all-MiniLM-L6-v2` Sentence Transformer converts each chunk into a numerical vector representing its semantic content. The user's question is embedded using the same model so it can be compared with the indexed document chunks.
+<details open>
+<summary><b>3. Embedding Generation</b></summary>
 
-### 4️⃣ FAISS similarity search
+<br>
 
-The application L2-normalizes document and query embeddings and uses `faiss.IndexFlatIP` to rank candidate chunks by inner product. For normalized vectors, this ranking corresponds to cosine-similarity ranking.
+The `all-MiniLM-L6-v2` Sentence Transformer converts document chunks and user questions into dense vector representations.
 
-The three highest-ranked chunks are selected as context for answer generation.
+These embeddings enable semantic retrieval, helping the application find passages related to a question even when the wording differs.
 
-### 5️⃣ Answer generation
+</details>
 
-The retrieved passages, question, and recent conversation history are formatted into a prompt and passed to `google/flan-t5-base` using the Hugging Face tokenizer and sequence-to-sequence model.
+<details open>
+<summary><b>4. Vector Indexing and Retrieval</b></summary>
 
-The prompt instructs the model to answer from the document context and acknowledge missing information. Retrieved passages are also displayed to help users inspect the evidence behind a response.
+<br>
+
+The application converts document embeddings to `float32`, normalizes them using `faiss.normalize_L2`, and stores them in a FAISS `IndexFlatIP` index.
+
+When a question is submitted:
+
+1. The question is converted into an embedding.
+2. The query vector is normalized.
+3. FAISS searches for the most similar document chunks.
+4. The application selects up to three results, depending on the number of indexed chunks.
+5. The retrieved passages are passed to the generation model.
+
+> For normalized vectors, inner-product ranking corresponds to cosine-similarity ranking.
+
+</details>
+
+<details open>
+<summary><b>5. Answer Generation</b></summary>
+
+<br>
+
+The application uses Hugging Face Transformers with `google/flan-t5-base` to generate answers from the retrieved context.
+
+The prompt instructs the model to answer using the supplied document context, provide a direct response, and acknowledge when the requested information is not specified.
+
+Recent conversation history is also included to support follow-up questions. However, prompt instructions alone cannot guarantee that every answer is accurate or free from hallucinations.
+
+</details>
+
+<details open>
+<summary><b>6. Source Inspection</b></summary>
+
+<br>
+
+Retrieved passages are displayed in expandable sections alongside their source PDF filenames. This gives users a way to inspect the evidence returned by the retrieval component.
+
+The current implementation displays excerpts and filenames rather than page-number citations.
+
+</details>
+
+<details open>
+<summary><b>7. Caching and Session Handling</b></summary>
+
+<br>
+
+The application uses Streamlit resource caching for model loading. It also calculates SHA-256 hashes for uploaded files to identify document sets and reuse previously processed chunks and the FAISS index when the uploads remain unchanged.
+
+</details>
 
 ---
 
-## 🧪 Testing
+## 🧰 Technology Stack
 
-I tested the application using a fictional company-handbook PDF created specifically for RAG evaluation.
-
-The test scenarios included:
-
-- Retrieving stated facts, such as working hours and annual learning budget.
-- Answering questions about remote-work policies and security reporting.
-- Asking questions about information not specified in the document, such as the company's CEO.
-- Inspecting retrieved text excerpts to check whether the relevant information was returned.
-
-> These tests helped examine both retrieval and answer generation. They are functional checks, not a formal accuracy benchmark. No quantified retrieval or answer-quality score is claimed.
+| Layer | Component | Technology |
+|---|---|---|
+| **Core** | Programming language | Python |
+| | User interface | Streamlit |
+| **Document processing** | PDF extraction | PyPDF |
+| | Text splitting | LangChain Text Splitters |
+| **Retrieval** | Embedding model | `all-MiniLM-L6-v2` |
+| | Vector search | FAISS |
+| | Similarity index | `IndexFlatIP` |
+| **Generation** | Text-generation model | `google/flan-t5-base` |
+| | Model framework | Hugging Face Transformers |
+| | Deep learning | PyTorch |
+| **Utilities** | Numerical processing | NumPy |
+| **Quality & workflow** | Testing | pytest |
+| | Continuous integration | GitHub Actions |
+| | Development notebooks | Jupyter / Google Colab |
 
 ---
 
-## 💻 Installation and Local Execution
+## 📁 Project Structure
+
+```text
+Chatbot/
+├── .github/
+│   └── workflows/
+│       └── test.yml          # GitHub Actions test workflow
+├── tests/
+│   └── test_app.py           # Automated unit tests
+├── app.py                    # Streamlit interface and RAG pipeline
+├── retrieval.py              # FAISS retrieval logic
+├── text_processing.py        # Text chunking utility
+├── requirements.txt          # Project dependencies
+├── Chatbot.ipynb             # Development notebook
+├── RAG_ChatBot.ipynb         # RAG experimentation notebook
+└── README.md                 # Project documentation
+```
+
+---
+
+## 🚀 Installation and Usage
 
 ### Prerequisites
 
-- Python 3.10 or another Python version compatible with the selected package versions.
-- Git.
-- Sufficient memory and storage to download and run the embedding and language models.
+- Python 3.10 or newer recommended; the CI workflow uses Python 3.12.
+- Git installed on your system.
+- Internet access for downloading pretrained models on the first run.
+- Adequate RAM and storage for the embedding and generation models.
 
-### 1. Clone the repository
+### Setup
+
+**1. Clone the repository**
 
 ```bash
 git clone https://github.com/muneer-ahmad10/Chatbot.git
 cd Chatbot
 ```
 
-### 2. Create a virtual environment
+**2. Create a virtual environment**
+
+<details>
+<summary>macOS / Linux</summary>
 
 ```bash
-python -m venv .venv
-```
-
-Activate it on macOS or Linux:
-
-```bash
+python3 -m venv .venv
 source .venv/bin/activate
 ```
 
-### 3. Install dependencies
+</details>
 
-After adding a tested `requirements.txt` to the repository, run:
+<details>
+<summary>Windows</summary>
 
 ```bash
+python -m venv .venv
+.venv\Scripts\activate
+```
+
+</details>
+
+**3. Install dependencies**
+
+```bash
+python -m pip install --upgrade pip
 pip install -r requirements.txt
 ```
 
-The core application dependencies include:
-
-```text
-streamlit
-numpy
-faiss-cpu
-pypdf
-sentence-transformers
-transformers
-torch
-langchain-text-splitters
-```
-
-The exact versions should be pinned after verifying a clean installation. `pyngrok` is additionally needed for the Colab tunnel workflow.
-
-### 4. Launch the application
-
-Once `app.py` is saved in the repository root:
+**4. Run the application**
 
 ```bash
 streamlit run app.py
 ```
 
-Open the local URL printed by Streamlit, upload one or more readable PDFs, and start asking questions.
-
-> 📝 **Repository note:** The current implementation is embedded in `RAG_ChatBot.ipynb`. Commit the generated `app.py` and a tested `requirements.txt` before relying on these clone-and-run instructions.
+Open the local URL printed in your terminal, upload one or more text-readable PDF files, and ask questions about their contents.
 
 ---
 
-## ☁️ Running in Google Colab
+## 🧪 Testing and Continuous Integration
 
-The development notebook installs the required libraries, writes the Streamlit application to `app.py`, starts the Streamlit server, and creates a temporary ngrok tunnel.
+The repository includes automated unit tests using **pytest** and a **GitHub Actions** workflow that runs tests on pushes and pull requests targeting `main` or `master`.
 
-For authentication, store your ngrok token in Google Colab's Secrets panel as `NGROK_AUTH_TOKEN` and retrieve it in the notebook:
+### Test Coverage
 
-```python
-from google.colab import userdata
-from pyngrok import ngrok
+| Test | Validation |
+|---|---|
+| Long-text chunking | Multiple non-empty chunks are generated |
+| Short-text chunking | Short text is handled correctly |
+| Retrieval ranking | The most relevant chunk is returned first |
+| Empty-index handling | Retrieval returns empty results when the index is empty |
+| Top-k behavior | Retrieval returns the requested number of results |
 
-ngrok_token = userdata.get("NGROK_AUTH_TOKEN")
-ngrok.set_auth_token(ngrok_token)
+### Test Results
 
-public_url = ngrok.connect(8501)
-print(public_url)
+| Metric | Result |
+|---|---|
+| Automated test cases | 5 |
+| Local test run | 5 passed |
+| GitHub Actions | Successful workflow run |
+| Test framework | pytest |
+| CI environment | Ubuntu with Python 3.12 |
+
+These tests use deterministic sample vectors to validate retrieval behavior without relying on live language-model responses.
+
+### Run Tests Locally
+
+Install the test dependencies:
+
+```bash
+python -m pip install numpy faiss-cpu langchain-text-splitters pytest
 ```
 
-> 🔐 Do not hardcode the token or commit it to GitHub. The public ngrok URL is temporary and may stop working when the Colab runtime ends or the tunnel is closed.
+Run the test suite:
+
+```bash
+python -m pytest tests/ -v
+```
+
+### Testing Resources
+
+- [Automated test suite](https://github.com/muneer-ahmad10/Chatbot/blob/main/tests/test_app.py)
+- [GitHub Actions workflow](https://github.com/muneer-ahmad10/Chatbot/blob/main/.github/workflows/test.yml)
+- [GitHub Actions run history](https://github.com/muneer-ahmad10/Chatbot/actions)
+
+> **Evaluation scope:** The existing automated tests validate text chunking and core retrieval behavior. They do not constitute a quantitative benchmark of end-to-end answer accuracy, hallucination rates, or performance across a large collection of PDFs.
 
 ---
 
-## ⚠️ Current Limitations
+## ⚠️ Limitations
 
-| Area | Limitation |
-|:--|:--|
-| **Answer reliability** | Prompt instructions do not eliminate hallucinations; generated answers still need verification. |
-| **PDF coverage** | Text extraction does not automatically handle scanned or image-only documents. |
-| **Source traceability** | The current implementation records PDF filenames and retrieved text but does not preserve page numbers for citations. |
-| **Retrieval quality** | Selecting three chunks is a fixed setting and may not be optimal for every document or question. |
-| **Evaluation** | The project has functional test cases but no formal retrieval benchmark or quantified answer-quality evaluation. |
-| **Runtime and deployment** | Colab and ngrok provide a convenient demonstration environment, not a persistent production deployment. |
-| **Reproducibility** | A committed `app.py` and tested, pinned dependencies are needed for a reliable clean setup. |
-
----
-
-## 🔮 Planned Improvements
-
-- [ ] Add page-level source citations.
-- [ ] Build a repeatable evaluation dataset with answerable and unanswerable questions.
-- [ ] Compare chunk sizes, overlap settings, and retrieval configurations.
-- [ ] Improve handling of empty, corrupted, and scanned PDFs.
-- [ ] Add a more robust strategy for detecting insufficient evidence.
-- [ ] Cache document processing and indexes where appropriate.
-- [ ] Add dependency version pins and a clean-install verification procedure.
-- [ ] Deploy a persistent demo with suitable resource and security controls.
+| Area | Detail |
+|---|---|
+| **Answer reliability** | The generation model can produce inaccurate or unsupported answers despite context-focused prompting. |
+| **Scanned PDFs** | Image-only PDFs require OCR, which is not currently implemented. |
+| **Retrieval settings** | The application uses a fixed top-three retrieval configuration, which may not be optimal for every document. |
+| **Source citations** | Retrieved excerpts include source filenames but do not currently provide page-level citations. |
+| **Evaluation scope** | Automated tests cover core processing and retrieval behavior, not comprehensive answer-quality evaluation. |
+| **Dependency reproducibility** | Dependencies are listed in `requirements.txt`, but package versions are not fully pinned. |
+| **Resource requirements** | Pretrained models may require significant memory and startup time. |
+| **Production readiness** | The project demonstrates a local RAG application and automated component tests; it has not been established as a production-grade service. |
 
 ---
 
-## 👨‍💻 Author
+## 🗺️ Future Improvements
 
-<div align="center">
+**Evaluation**
+
+- [ ] Create a question-answer evaluation dataset containing answerable and unanswerable questions.
+- [ ] Evaluate retrieval with metrics such as Recall@k.
+- [ ] Measure answer faithfulness and correctness against reference answers.
+- [ ] Experiment with chunk sizes, overlap, and retrieval thresholds.
+
+**Features & Robustness**
+
+- [ ] Add page-level citations for retrieved passages.
+- [ ] Improve handling of scanned, corrupted, and empty PDFs.
+- [ ] Improve insufficient-evidence detection and handling of conflicting passages.
+
+**Engineering**
+
+- [ ] Add automated tests for PDF extraction and end-to-end answer generation.
+- [ ] Pin and validate dependency versions in a clean environment.
+- [ ] Explore efficient inference and persistent deployment options.
+
+---
+
+## 🎯 Skills Demonstrated
+
+`Python` `Natural Language Processing` `Retrieval-Augmented Generation (RAG)` `Semantic Search` `Text Embeddings` `FAISS` `Hugging Face Transformers` `Prompt Engineering` `PDF Processing` `Streamlit` `Unit Testing` `GitHub Actions` `Continuous Integration`
+
+---
+
+## 👤 Author
 
 **Muneer Ahmad Dar**
 
-AI/ML &nbsp;|&nbsp; NLP &nbsp;|&nbsp; Retrieval-Augmented Generation &nbsp;|&nbsp; Semantic Search &nbsp;|&nbsp; PyTorch
+| | |
+|---|---|
+| **GitHub** | [muneer-ahmad10](https://github.com/muneer-ahmad10) |
+| **Project repository** | [PDF RAG Chatbot](https://github.com/muneer-ahmad10/Chatbot) |
+| **Development notebook** | [RAG_ChatBot.ipynb](https://github.com/muneer-ahmad10/Chatbot/blob/main/RAG_ChatBot.ipynb) |
+| **Additional notebook** | [Chatbot.ipynb](https://github.com/muneer-ahmad10/Chatbot/blob/main/Chatbot.ipynb) |
 
-[![GitHub](https://img.shields.io/badge/GitHub-muneer--ahmad10-181717?style=for-the-badge&logo=github)](https://github.com/muneer-ahmad10)
-[![Repository](https://img.shields.io/badge/Project-Chatbot_Repository-blue?style=for-the-badge&logo=github)](https://github.com/muneer-ahmad10/Chatbot)
+<div align="center">
+
+---
+
+*An applied NLP project exploring semantic document retrieval, context-informed question answering, and automated testing of core retrieval components.*
 
 </div>
-
-- GitHub: https://github.com/muneer-ahmad10
-- Project repository: https://github.com/muneer-ahmad10/Chatbot
